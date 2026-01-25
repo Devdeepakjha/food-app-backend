@@ -5,21 +5,21 @@ const JWT = require("jsonwebtoken");
 //Register
 const registerController = async (req, res) => {
   try {
-    const { userName, email, password, phone, address } = req.body;
+    const { userName, email, password, phone, address, answer } = req.body;
     //validation
-    if (!userName || !email || !password || !phone || !address) {
+    if (!userName || !email || !password || !phone || !address || !answer) {
       return res.status(400).send({
         success: false,
         message: "Please Provide All Fields",
       });
-      //check user is registered or not
-      const existing = await userModel.findOne({ email });
-      if (existing) {
-        return res.status(409).send({
-          success: false,
-          message: "Email already registered please login!",
-        });
-      }
+    }
+    //check user is registered or not
+    const existing = await userModel.findOne({ email });
+    if (existing) {
+      return res.status(409).send({
+        success: false,
+        message: "Email already registered please login!",
+      });
     }
     //hashing passworwd
     let salt = bcrypt.genSaltSync(10);
@@ -31,6 +31,7 @@ const registerController = async (req, res) => {
       password: hashedPassword,
       phone,
       address,
+      answer,
     });
     res.status(201).send({
       success: true,

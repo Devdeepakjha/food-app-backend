@@ -1,6 +1,7 @@
 const userModel = require("../models/userModel");
+const bcrypt = require("bcryptjs");
 
-//GET USER INFO.
+// GET USER INFO.
 const getUserController = async (req, res) => {
   try {
     // find user
@@ -30,7 +31,7 @@ const getUserController = async (req, res) => {
   }
 };
 
-//UPDATE USER
+// UPDATE USER
 const updateUsercontroller = async (req, res) => {
   try {
     //find user
@@ -64,7 +65,110 @@ const updateUsercontroller = async (req, res) => {
   }
 };
 
+// UPDATE USER PASSWORD
+const updatePasswordController = async (req, res) => {
+  try {
+    //find user
+    const user = await userModel.findById({ _id: req.userId });
+    //validation
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User Not Found",
+      });
+    }
+    //get data from user
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide Old or New Password",
+      });
+    }
+    //check password || compare password
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).send({
+        success: false,
+        message: "Invalid old password",
+      });
+    }
+    //hashing the newpassword
+    let salt = bcrypt.genSaltSync(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+    await user.save();
+    res.status(200).send({
+      success: true,
+      message: "Password Updated Succesfully",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Error In Password Update API",
+      error,
+    });
+  }
+};
+
+// RESET PASSWORD
+const resetPasswordController = async (req, res) => {
+  try {
+    const { email, newPassword, answer } = req.body;
+    if (!email || !newPassword || !answer) {
+      return res.status(401).send({
+        success: false,
+        message: "Please Provide All Fields",
+      });
+    }
+    const user = await userModel.findOne({ email, answer });
+    if (!user) {
+      return res.status(402).send({
+        success: false,
+        message: "User Not Found or Invalid answer",
+      });
+    }
+    //hashing the new password
+    let salt = bcrypt.genSaltSync(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+    await user.save();
+    res.status(200).send({
+      success: true,
+      message: "Password Reset Successfully",
+    });
+  } catch (error) {}
+  console.log(error);
+  res.status(500).send({
+    success: false,
+    message: "Error in Password Reset APIs",
+    error,
+  });
+};
+
+// DELETE PROFILE ACCOUNT
+const deleteProfileController = async (req, res) => {
+  try {
+    await userModel.findByIdAndDelete(req.params.id);
+    return res.status(200).send({
+      success: true,
+      message: "Your Account has been deleted successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Error In Delete Profie API",
+      error,
+    });
+  }
+};
+
 module.exports = {
   getUserController,
   updateUsercontroller,
+  updatePasswordController,
+  resetPasswordController,
+  deleteProfileController,
 };
